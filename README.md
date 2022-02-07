@@ -1,4 +1,2 @@
 # Previous-School-Work
-Previous Work Done for School
-
-For Python I had one course in it and then a lot of self teaching to help with a charity called "Code Ninas" that taught python programming.
+This is my previous school work, coding wise it was HTML in 2019, Python in 2020, SQL in 2019, 2021, & 2022, and R in 2020,2021, & 2022.
