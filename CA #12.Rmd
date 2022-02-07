@@ -1,0 +1,145 @@
+---
+title: 'CA #12'
+author: "Victoria Kincaid"
+date: "11/13/2021"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(moderndive)
+library(infer)
+
+evals_ch5 <- evals %>%
+  select(ID, score, bty_avg, age)
+glimpse(evals_ch5)
+
+ggplot(evals_ch5, aes(x = bty_avg, y = score)) +
+  geom_point() +
+  labs(x = "looker score", y = "teachin' score", 
+       title = "Relationship between if teachin' and beauty scores") +
+  geom_smooth(method = "lm", se = FALSE)
+
+score_model <- lm(score ~ bty_avg, data = evals_ch5)
+
+get_regression_table(score_model)
+
+score_model <- lm(score ~ bty_avg, data = evals_ch5)
+
+regression_points <- get_regression_points(score_model)
+
+regression_points
+
+evals %>%
+  select(ID, prof_ID, score, bty_avg)
+
+ggplot(regression_points, aes(x = residual)) +
+  geom_histogram(binwidth = 0.25, color = "white") +
+  labs(x = "Residual")
+
+ggplot(regression_points, aes(x = bty_avg, y = residual)) +
+  geom_point() +
+  labs(x = "Beauty Score", y = "Residual") +
+  geom_hline(yintercept = 0, col = "blue", size = 1)
+
+# TE 12
+score_model_age <- lm(score ~ age, data = evals_ch5)
+
+regression_points_age <- get_regression_points(score_model_age)
+regression_points_age
+
+ggplot(regression_points_age, aes(x = residual)) +
+  geom_histogram(binwidth = 0.25, color = "white") +
+  labs(x = "Residual")
+
+ggplot(regression_points_age, aes(x = age, y = residual)) +
+  geom_point() +
+  labs(x = "Age", y = "Residual") +
+  geom_hline(yintercept = 0, col = "blue", size = 1)
+
+# back to textbook
+
+bootstrap_distn_slope <- evals_ch5 %>%
+  specify(formula = score ~ bty_avg) %>%
+  generate(reps = 1000, type = "bootstrap") %>%
+  calculate(stat = "slope")
+bootstrap_distn_slope
+
+visualise(bootstrap_distn_slope)
+
+percentile_ci <- bootstrap_distn_slope %>%
+  get_confidence_interval(type = "percentile", level = 0.95)
+percentile_ci
+
+observed_slope <- evals %>%
+  specify(score ~ bty_avg) %>%
+  calculate(stat = "slope")
+observed_slope
+
+se_ci <- bootstrap_distn_slope %>%
+  get_ci(level = 0.95, type = "se", point_estimate = observed_slope)
+
+se_ci
+
+visualise(bootstrap_distn_slope) +
+  shade_confidence_interval(endpoints = percentile_ci, fill = NULL,
+                            linetype = "solid", "grey90") +
+  shade_confidence_interval(endpoints = se_ci, fill = NULL,
+                            linetype = "dashed", color = "grey60") +
+  shade_confidence_interval(endpoints = c(0.035, 0.099), fill = NULL,
+                            linetype = "dotted", color = "black")
+
+null_distn_slope <- evals %>%
+  specify(score ~ bty_avg) %>%
+  hypothesise(null = "independence") %>%
+  generate(reps = 1000, type = "permute") %>%
+  calculate(stat = "slope")
+
+null_distn_slope %>% 
+  get_p_value(obs_stat = observed_slope, direction = "both")
+```
+
+Same as previous entry, I am just using the previous textbook entries and changing out stat = "slope" for stat = "correlation".
+
+```{r}
+bootstrap_distn_correlation <- evals_ch5 %>%
+  specify(formula = score ~ bty_avg) %>%
+  generate(reps = 1000, type = "bootstrap") %>%
+  calculate(stat = "correlation")
+bootstrap_distn_correlation
+
+visualise(bootstrap_distn_correlation)
+
+percentile_ci_c <- bootstrap_distn_correlation %>%
+  get_confidence_interval(type = "percentile", level = 0.95)
+percentile_ci_c
+
+observed_correlation <- evals %>%
+  specify(score ~ bty_avg) %>%
+  calculate(stat = "correlation")
+observed_correlation
+
+se_ci_c <- bootstrap_distn_correlation %>%
+  get_ci(level = 0.95, type = "se", point_estimate = observed_correlation)
+
+se_ci_c
+
+visualise(bootstrap_distn_correlation) +
+  shade_confidence_interval(endpoints = percentile_ci_c, fill = NULL,
+                            linetype = "solid", "grey90") +
+  shade_confidence_interval(endpoints = se_ci_c, fill = NULL,
+                            linetype = "dashed", color = "grey60") +
+  shade_confidence_interval(endpoints = c(0.035, 0.099), fill = NULL,
+                            linetype = "dotted", color = "black")
+
+null_distn_correlation <- evals %>%
+  specify(score ~ bty_avg) %>%
+  hypothesise(null = "independence") %>%
+  generate(reps = 1000, type = "permute") %>%
+  calculate(stat = "correlation")
+
+null_distn_correlation %>% 
+  get_p_value(obs_stat = observed_correlation, direction = "both")
+```
+

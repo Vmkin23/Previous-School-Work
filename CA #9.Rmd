@@ -1,0 +1,60 @@
+---
+title: 'CA #9'
+author: "Victoria Kincaid"
+date: "10/25/2021"
+todays music: "https://www.youtube.com/watch?v=mWZ7Bsazc4I"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(moderndive)
+```
+
+Complete LC 7.6 and LC 7.7. Use R to run Summary Statistics to find answers to 
+LC 7.14 and LC 7.15. Upload your findings to Blackboard for grading. 
+
+(LC7.6) In Figure 7.9, we used shovels to take 1000 samples each, computed the resulting 1000 proportions of the shovel’s balls that were red, and then visualized the distribution of these 1000 proportions in a histogram. We did this for shovels with 25, 50, and 100 slots in them. As the size of the shovels increased, the histograms got narrower. In other words, as the size of the shovels increased from 25 to 50 to 100, did the 1000 proportions
+A. vary less,
+B. vary by the same amount, or
+C. vary more?
+
+The answer is A! They varied less :)
+   
+
+(LC7.7) What summary statistic did we use to quantify how much the 1000 proportions red varied?
+A. The interquartile range
+B. The standard deviation
+C. The range: the largest value minus the smallest.
+
+That would be B! The standard deviation
+```{r}
+bowl %>%
+  summarise(red = sum(color == "red"))
+```
+
+```{r}
+virtual_shovel <- bowl %>%
+  rep_sample_n(size = 50)
+virtual_shovel
+```
+
+```{r}
+virtual_shovel %>%
+  summarise(num_red = sum(color == "red")) %>%
+  mutate(prop_red = num_red/50)
+```
+
+(LC7.14) What purpose did the sampling distributions serve?
+
+Well, sampling distributions are important, the larger the sample the more
+accurate the information we will get, mentioned previously, the 25 slots shovel
+sometimes returns a 20% red balls while the 100 slot shovel almost never does.
+The larger the sample the more accurate the data.
+
+(LC7.15) What does the standard error of the sample proportion ˆp quantify?
+
+The standard error (standard deviations) let's us see the accuracy of our
+results. The smaller the standard error the more accurate the data. (To an
+extreme if there was 0 standard error than you have no error in your data).

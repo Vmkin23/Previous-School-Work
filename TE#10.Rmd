@@ -1,0 +1,168 @@
+---
+title: "TE#10"
+author: "Victoria Kincaid"
+date: "10/29/2021"
+music: "https://www.youtube.com/watch?v=pni_IBkQcoE"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#all the buildup to the LE8.5
+library(tidyverse)
+library(moderndive)
+library(infer)
+
+pennies_sample
+
+ggplot(pennies_sample, aes(x = year)) +
+  geom_histogram(binwidth = 10, color = "white")
+
+x_bar <- pennies_sample %>%
+  summarise(mean_year = mean(year))
+
+x_bar
+
+pennies_resamples
+
+resampled_means <- pennies_resamples %>%
+  group_by(name) %>%
+  summarise(mean_year = mean(year))
+resampled_means
+
+ggplot(resampled_means, aes(x = mean_year)) +
+  geom_histogram(binwidth = 1, color = "white", boundary = 1990) +
+  labs(x = "Sampled mean year")
+
+virtual_shovel <- bowl %>%
+  rep_sample_n(size = 50)
+
+virtual_resample <- pennies_sample %>%
+  rep_sample_n(size = 50, replace = TRUE)
+
+virtual_resample %>%
+  summarise(resample_mean = mean(year))
+
+virtual_resamples <- pennies_sample %>%
+  rep_sample_n(size = 50, replace = TRUE, reps = 35)
+virtual_resamples
+
+virtual_resampled_means <- virtual_resamples %>%
+  group_by(replicate) %>%
+  summarise(mean_year = mean(year))
+virtual_resampled_means
+
+ggplot(virtual_resampled_means, aes(x = mean_year)) +
+  geom_histogram(binwidth = 1, color = "white", boundary = 1990) +
+  labs(x = "Resample mean year")
+
+#changing from 35 to 1000 for a less coarse thing to work with
+virtual_resamples <- pennies_sample %>%
+  rep_sample_n(size = 50, replace = TRUE, reps = 1000)
+#computing sample means
+virtual_resampled_means <- virtual_resamples %>%
+  group_by(replicate) %>%
+  summarise(mean_year = mean(year))
+
+#ORRRRRRR
+virtual_resampled_means <- pennies_sample %>%
+  rep_sample_n(size = 50, replace = TRUE, reps = 1000) %>%
+  group_by(replicate) %>%
+  summarise(mean_year = mean(year))
+  
+#yayayaya saves time
+
+virtual_resampled_means
+
+ggplot(virtual_resampled_means, aes(x = mean_year)) +
+  geom_histogram(binwidth = 1, color = "white", bondary = 1990) +
+  labs(x = "sample mean")
+
+virtual_resampled_means %>%
+  summarise(mean_of_means = mean(mean_year))
+
+# Woo! First bootstrap distribution! jajaja
+
+virtual_resampled_means %>%
+  summarise(SE = sd(mean_year))
+
+
+
+pennies_sample %>%
+  rep_sample_n(size = 50, replace = TRUE, reps = 1000) %>%
+  group_by(replicate) %>%
+  summarise(mean_year = mean(year))
+
+pennies_sample %>%
+  summarise(stat = mean(year))
+
+pennies_sample %>%
+  specify(response = year) %>%
+  calculate(stat = "mean")
+
+pennies_sample %>%
+  specify(formula = year ~ NULL)
+
+pennies_sample %>%
+  specify(response = year) %>%
+  generate(reps = 1000, type = "bootstrap")
+
+bootstrap_distribution <- pennies_sample %>%
+  specify(response = year) %>%
+  generate(reps = 1000) %>%
+  calculate(stat = "mean")
+
+bootstrap_distribution
+
+visualise(bootstrap_distribution)
+
+percentile_ci <- bootstrap_distribution %>%
+  get_confidence_interval(level = 0.95, type = "percentile")
+percentile_ci
+
+visualize(bootstrap_distribution) +
+  shade_confidence_interval(endpoints = percentile_ci)
+#I like this coloration this is fun to play with
+visualise(bootstrap_distribution) +
+  shade_ci(endpoints = percentile_ci, color = "hotpink", fill = "khaki")
+
+
+standard_error_ci <- bootstrap_distribution %>%
+  get_confidence_interval(type = "se", point_estimate = x_bar)
+standard_error_ci
+
+visualise(bootstrap_distribution) +
+  shade_confidence_interval(endpoints = standard_error_ci)
+
+
+```
+
+
+```{r}
+# I am just pretty much repeating what I just did with the text, only changing mean to median
+
+# (LC8.5) Construct a 95% confidence interval for the median year of minting of all US pennies. Use the percentile method and, if appropriate, then use the standard-error method.
+
+bootstrap_distribution <- pennies_sample %>%
+  specify(response = year) %>%
+  generate(reps = 1000) %>%
+  calculate(stat = "median")
+
+percentile_ci <- bootstrap_distribution %>%
+  get_confidence_interval(level = 0.95, type = "percentile")
+percentile_ci
+
+visualise(bootstrap_distribution) +
+  shade_ci(endpoints = percentile_ci, fill = "khaki")
+
+#Looking at it, it doesn't look particularly like a normal distribution (i.e. bell shaped), so I don't *think* the standard error method should be used. 
+
+#if doing that though it would be:
+
+visualise(bootstrap_distribution) +
+  shade_confidence_interval(endpoints = standard_error_ci)
+
+#andd yeah that doesn't look right to me, so imma say not appropriate.
+
+```
+

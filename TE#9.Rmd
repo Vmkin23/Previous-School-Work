@@ -1,0 +1,117 @@
+---
+title: 'TE #9'
+author: "Victoria Kincaid"
+date: "10/25/2021"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(moderndive)
+library(grid)
+library(gridExtra)
+library(grid)
+library(ggplot2)
+library(gtable)
+```
+
+# Complete LC 7.1 and LC 7.2. Create histograms consistent with Figure 7.9. 
+# Put your findings into a single file and upload for grading. 
+```{r}
+tactile_prop_red
+
+ggplot(tactile_prop_red, aes(x = prop_red)) +
+  geom_histogram(binwidth = 0.05, boundary = 0.4, color = "white") +
+  labs(x = "Proportion of 50 balls that were red",
+       title = "Distribution of 33 proportions red")
+```
+
+
+
+# 7.1 It's important to mix the bowl to allow everyone to have the same
+# sample to draw from. It would affect the outcome and skew the results
+# for any draw beyond the first one.
+
+# 7.2 Because sampling is chaotic and random like that! But everyone's
+# sample was different and we need many different samples to get to 
+# a close answer.
+```{r}
+bowl
+
+# segment 1 - sample size = 25
+# 1a using the shovel 1000 times
+virtual_samples_25 <- bowl %>%
+  rep_sample_n(size = 25, reps = 1000)
+
+#1b compute the resulting 1000 replicates of proportion red
+virtual_prop_red_25 <- virtual_samples_25 %>%
+  group_by(replicate) %>%
+  summarise(red = sum(color == "red")) %>%
+  mutate(prop_red = red/25)
+
+#1c plotting this distribution via histogram
+
+ggplot(virtual_prop_red_25, aes(x = prop_red)) +
+  geom_histogram(binwidth = 0.05, boundary = 0.4, color = "white") +
+  labs(x = "Proportion of 25 balls that were red", title = "25")
+
+# now imma just copy and paste and change it out for 50 & 100 respectively
+# 50
+virtual_samples_50 <- bowl %>%
+  rep_sample_n(size = 50, reps = 1000)
+
+virtual_prop_red_50 <- virtual_samples_50 %>%
+  group_by(replicate) %>%
+  summarise(red = sum(color == "red")) %>%
+  mutate(prop_red = red/50)
+
+ggplot(virtual_prop_red_50, aes(x = prop_red)) +
+  geom_histogram(binwidth = 0.05, boundary = 0.4, color = "white") +
+  labs(x = "Proportion of 50 balls that were red", title = "50")
+
+#100
+virtual_samples_100 <- bowl %>%
+  rep_sample_n(size = 100, reps = 1000)
+
+virtual_prop_red_100 <- virtual_samples_100 %>%
+  group_by(replicate) %>%
+  summarise(red = sum(color == "red")) %>%
+  mutate(prop_red = red/100)
+
+ggplot(virtual_prop_red_100, aes(x = prop_red)) +
+  geom_histogram(binwidth = 0.05, boundary = 0.4, color = "white") +
+  labs(x = "Proportion of 100 balls that were red", title = "100")
+```
+
+
+```{r,echo=TRUE,out.width='.49\\linewidth', fig.width=3, fig.height=3}
+#now we gotta have them all side by side
+#thanks to these sites for helping figure this out:
+#https://cran.r-project.org/web/packages/egg/vignettes/Ecosystem.html
+#https://statisticsglobe.com/change-font-size-of-ggplot2-plot-in-r-axis-text-main-title-legend
+
+plot25 <-  ggplot(virtual_prop_red_25, aes(x = prop_red)) +
+    geom_histogram(binwidth = 0.05, boundary = 0.4, color = "white") +
+    labs(title = "25")
+plot50 <- ggplot(virtual_prop_red_50, aes(x = prop_red)) +
+    geom_histogram(binwidth = 0.05, boundary = 0.4, color = "white") +
+    labs(title = "50")
+plot100 <-   ggplot(virtual_prop_red_100, aes(x = prop_red)) +
+    geom_histogram(binwidth = 0.05, boundary = 0.4, color = "white") +
+    labs(title = "100") 
+
+grid.arrange(
+  plot25 + theme(text = element_text(size = 5)),
+  plot50 + theme(text = element_text(size = 5)),
+  plot100 + theme(text = element_text(size = 5)),
+  nrow = 1,
+  top = textGrob("Comparing distributions of proportions red for three different shovel sizes",gp = gpar(fontsize = 5)),
+  bottom = textGrob("Proportions of shovel's balls that are red", gp = gpar(fontsize = 5)))
+
+
+```
+
+
+
+

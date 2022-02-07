@@ -1,0 +1,63 @@
+---
+title: "CA11"
+author: "Victoria Kincaid"
+date: "11/6/2021"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(infer)
+library(moderndive)
+library(nycflights13)
+library(ggplot2movies)
+
+```
+
+```{r}
+movies
+
+movies_sample
+
+ggplot(data = movies_sample, aes(x = genre, y = rating)) +
+  geom_boxplot() +
+  labs(y = "IMDb rating")
+
+movies_sample %>% 
+  group_by(genre) %>% 
+  summarize(n = n(), mean_rating = mean(rating), std_dev = sd(rating))
+
+movies_sample %>% 
+  specify(formula = rating ~ genre)
+
+movies_sample %>% 
+  specify(formula = rating ~ genre) %>% 
+  hypothesize(null = "independence")
+
+movies_sample %>% 
+  specify(formula = rating ~ genre) %>% 
+  hypothesize(null = "independence") %>% 
+  generate(reps = 1000, type = "permute") %>% 
+  View()
+
+null_distribution_movies <- movies_sample %>% 
+  specify(formula = rating ~ genre) %>% 
+  hypothesize(null = "independence") %>% 
+  generate(reps = 1000, type = "permute") %>% 
+  calculate(stat = "diff in means", order = c("Action", "Romance"))
+null_distribution_movies
+
+obs_diff_means <- movies_sample %>% 
+  specify(formula = rating ~ genre) %>% 
+  calculate(stat = "diff in means", order = c("Action", "Romance"))
+obs_diff_means
+
+visualize(null_distribution_movies, bins = 10) + 
+  shade_p_value(obs_stat = obs_diff_means, direction = "both")
+
+null_distribution_movies %>% 
+  get_p_value(obs_stat = obs_diff_means, direction = "both")
+```
+
+Previously the observed difference was -1.04 between action and romance movie ratings, and the p-value that returned was 0.006 and despite it being small it is larger than the set 0.001, so we fail to reject the null hypothesis that there is zero difference between the mean of action films and romance films.

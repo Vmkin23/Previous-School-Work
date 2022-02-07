@@ -1,0 +1,104 @@
+---
+title: 'TE #13'
+author: "Victoria Kincaid"
+date: "11/28/2021"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(moderndive)
+library(skimr)
+library(fivethirtyeight)
+
+view(house_prices)
+glimpse(house_prices)
+
+house_prices %>%
+  select(price, sqft_living, condition) %>%
+  skim()
+
+#histogram of house price:
+ggplot(house_prices, aes(x = price)) +
+  geom_histogram(color = "white") +
+  labs(x = "price(USD)", title = "House Price")
+
+#histogram of livable square feet:
+ggplot(house_prices, aes(x = sqft_living)) +
+  geom_histogram(color = "white") +
+  labs(x = "living space (square feet)", title = "House Size")
+
+#barplot of condition:
+ggplot(house_prices, aes(x = condition)) +
+  geom_bar()+
+  labs(x = "condition", title = "House Condition")
+
+house_prices <- house_prices %>%
+  mutate(
+    log10_price = log10(price),
+    log10_size = log10(sqft_living))
+
+house_prices %>%
+  select(price, log10_price, sqft_living, log10_size)
+
+# before log10 transformation
+#ggplot(house_prices, aes(x =price)) +
+  #geom_histogram(color = "white") +
+  #labs(x = "price (USD)", title = "House Price: Before")
+
+# after log10 transformation
+#ggplot(house_prices, aes(x = log10_price)) +
+  #geom_histogram(color = "white") +
+  #xlabs(x = "log10 price (USD)", title = "House Price: After")
+```
+
+```{r}
+####### This is figure 11.5 ##########
+
+# before log10 transformation
+ggplot(house_prices, aes(x =sqft_living)) +
+  geom_histogram(color = "white") +
+  labs(x = "living space (sq feet)", title = "House Size: Before")
+
+# after log10 transformation
+ggplot(house_prices, aes(x = log10_size)) +
+  geom_histogram(color = "white") +
+  labs(x = "log10 living space (sq feet)", title = "House Size: After")
+
+#########################################
+
+##### This is figure 11.6 ########
+
+#plot interaction model
+ggplot(house_prices,
+       aes(x = log10_size, y = log10_price, col = condition)) +
+  geom_point(alpha = 0.05) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(y = "log10 price",
+       x = "log10 size",
+       title = "House prices in Seattle")
+
+# plot parallel slopes model
+ggplot(house_prices,
+       aes(x = log10_size, y = log10_price, col = condition)) +
+  geom_point(alpha = 0.05) +
+  geom_parallel_slopes(se = FALSE) +
+  labs(y = "log10 price",
+       x = "log10 size",
+       title = "House prices in Seattle")
+################################################
+
+######## This is figure 11.7 #########
+
+ggplot(house_prices,
+       aes(x = log10_size, y = log10_price, col = condition)) +
+  geom_point(alpha = 0.04) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(y = "log10 price",
+       x = "log10 size",
+       title = "House prices in Seattle") +
+  facet_wrap( ~ condition)
+
+#############################################
+

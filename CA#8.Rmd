@@ -1,0 +1,40 @@
+---
+title: 'CA #8'
+author: "Victoria Kincaid"
+date: "10/17/2021"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# Write a one page paper describing Simpson's Paradox. 
+# Feel free to use sources outside the course text. 
+# # Why is it a paradox? Describe what you find and provide an example. 
+# Your example should match your description. 
+```
+
+Simpson's paradox is when two variables have either a positive or negative relationship, but when a third variable is introduced that initial relationship either disappears or is reversed. In the text book they use the example of how debt and income have a positive relationship until the variable of credit_limit, where their relationship then becomes a negative relationship.
+
+"Simpson’s paradox arises when there are hidden variables that split data into multiple separate distributions."(towardsdatascience)
+
+I viewed numerous examples ranging from the UC-Berkley acceptance rates to declining wage of the U.S. So I figured I would add my own example.
+
+Let's say we want to see if there is a difference 
+
+
+
+
+
+
+So, when analyzing data it all boils down to how your data is grouped.
+
+
+Bibliography -
+https://towardsdatascience.com/simpsons-paradox-and-interpreting-data-6a0443516765
+https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5936043/
+https://www.britannica.com/topic/Simpsons-paradox
+https://brilliant.org/wiki/simpsons-paradox/
+https://en.wikipedia.org/wiki/Simpson%27s_paradox
+https://blog.revolutionanalytics.com/2013/07/a-great-example-of-simpsons-paradox.html
+
+

@@ -1,0 +1,158 @@
+---
+title: 'CA #13'
+author: "Victoria Kincaid"
+date: "11/28/2021"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(moderndive)
+library(skimr)
+library(fivethirtyeight)
+
+view(house_prices)
+glimpse(house_prices)
+
+house_prices %>%
+  select(price, sqft_living, condition) %>%
+  skim()
+
+#histogram of house price:
+ggplot(house_prices, aes(x = price)) +
+  geom_histogram(color = "white") +
+  labs(x = "price(USD)", title = "House Price")
+
+#histogram of livable square feet:
+ggplot(house_prices, aes(x = sqft_living)) +
+  geom_histogram(color = "white") +
+  labs(x = "living space (square feet)", title = "House Size")
+
+#barplot of condition:
+ggplot(house_prices, aes(x = condition)) +
+  geom_bar()+
+  labs(x = "condition", title = "House Condition")
+
+house_prices <- house_prices %>%
+  mutate(
+    log10_price = log10(price),
+    log10_size = log10(sqft_living))
+
+house_prices %>%
+  select(price, log10_price, sqft_living, log10_size)
+
+# before log10 transformation
+ggplot(house_prices, aes(x =price)) +
+  geom_histogram(color = "white") +
+  labs(x = "price (USD)", title = "House Price: Before")
+
+# after log10 transformation
+ggplot(house_prices, aes(x = log10_price)) +
+  geom_histogram(color = "white") +
+  labs(x = "log10 price (USD)", title = "House Price: After")
+
+####### This is figure 11.5 ##########
+
+# before log10 transformation
+ggplot(house_prices, aes(x =sqft_living)) +
+  geom_histogram(color = "white") +
+  labs(x = "living space (sq feet)", title = "House Size: Before")
+
+# after log10 transformation
+ggplot(house_prices, aes(x = log10_size)) +
+  geom_histogram(color = "white") +
+  labs(x = "log10 living space (sq feet)", title = "House Size: After")
+
+#########################################
+
+##### This is figure 11.6 ########
+
+#plot interaction model
+ggplot(house_prices,
+       aes(x = log10_size, y = log10_price, col = condition)) +
+  geom_point(alpha = 0.05) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(y = "log10 price",
+       x = "log10 size",
+       title = "House prices in Seattle")
+
+# plot parallel slopes model
+ggplot(house_prices,
+       aes(x = log10_size, y = log10_price, col = condition)) +
+  geom_point(alpha = 0.05) +
+  geom_parallel_slopes(se = FALSE) +
+  labs(y = "log10 price",
+       x = "log10 size",
+       title = "House prices in Seattle")
+################################################
+
+######## This is figure 11.7 #########
+
+ggplot(house_prices,
+       aes(x = log10_size, y = log10_price, col = condition)) +
+  geom_point(alpha = 0.04) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(y = "log10 price",
+       x = "log10 size",
+       title = "House prices in Seattle") +
+  facet_wrap( ~ condition)
+
+#############################################
+
+#11.2.3
+
+#Fit regression model:
+price_interaction <- lm(log10_price ~ log10_size * condition, data = house_prices)
+
+get_regression_table(price_interaction)
+```
+
+```{r}
+#########################################
+#### LC 11.1 #########
+
+## Looking at the answer, I would have not derived from the change
+## in the two plots for 11.6 to have the only difference be a change
+## from * sign to + sign. I reread the text several times and don't
+## know what I was missing! Even read the appendix of log 10 transformations
+## but no luck because while informative did not answer the question.
+
+#Fit regression model:
+price_interaction <- lm(log10_price ~ log10_size + condition, data = house_prices)
+
+get_regression_table(price_interaction)
+# intercept + condition5intercept + slope*log10(1900)
+# 2.88 + .096 + .837*log10(1900)
+10^(2.88 + .096 + .837*log10(1900))
+```
+
+```{r, include = FALSE}
+########################################
+##### 11.3 ############
+glimpse(US_births_1994_2003)
+
+US_births_1999 <- US_births_1994_2003 %>%
+  filter(year == 1999)
+
+ggplot(US_births_1999, aes(x = date, y = births)) +
+  geom_line() +
+  labs(x = "Date", y = "# of Births", title = "US Births in 1999")
+
+US_births_1999 %>%
+  arrange(desc(births))
+```
+
+```{r}
+#######################################
+#### LC 11.2 ##############
+US_births_1994_2003 %>%
+  arrange(births) 
+# this seems to easy after the last one haha, didn't need to
+# write ascending almost got me there
+
+# Oh wow! Nobody wants to be born on Christmas interesting...
+
+```
+

@@ -1,0 +1,96 @@
+---
+title: 'TE #8'
+author: "Victoria Kincaid"
+date: "10/17/2021"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(moderndive)
+library(skimr)
+library(ISLR)
+```
+
+Figure 6.1
+```{r moderndive, include=FALSE}
+evals_ch6 <- evals %>%
+  select(ID, score, age, gender)
+glimpse(evals_ch6)
+evals_ch6 %>% sample_n(size = 5)
+evals_ch6 %>% select(score, age, gender) %>% skim()
+evals_ch6 %>% get_correlation(formula = score ~ age)
+```
+```{r}
+ggplot(evals_ch6, aes(x = age, y = score, color = gender)) +
+  geom_point()+
+  labs(x = "Age", y = "Teaching Score", color = "Gender")+
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+
+Figure 6.2
+```{r, include=FALSE}
+score_model_interaction <- lm(score~age*gender, data = evals_ch6)
+get_regression_table(score_model_interaction)
+```
+```{r}
+ggplot(evals_ch6, aes(x = age, y = score, color = gender)) +
+  geom_point() +
+  labs(x="Age", y = "Teaching Score", color = "Gender") +
+  geom_parallel_slopes(se = FALSE)
+```
+
+Figure 6.3
+```{r, include = FALSE}
+score_model_parallel_slopes <- lm(score ~ age + gender, data = evals_ch6)
+get_regression_table(score_model_parallel_slopes)
+
+```
+```{r,echo=FALSE,out.width='.49\\linewidth', fig.width=3, fig.height=3}
+par(mfrow = c(1,2))
+ggplot(evals_ch6, aes(x = age, y = score, color = gender)) +
+  geom_point()+
+  labs(x = "Age", y = "Teaching Score", color = "Gender")+
+  geom_smooth(method = "lm", se = FALSE)
+ggplot(evals_ch6, aes(x = age, y = score, color = gender)) +
+  geom_point() +
+  labs(x="Age", y = "Teaching Score", color = "Gender") +
+  geom_parallel_slopes(se = FALSE)
+par(mfrow = c(1,2))
+```
+
+Figure 6.4
+```{r,include= FALSE}
+regression_points <- get_regression_points(score_model_interaction)
+#Highlight1 <- head(regression_points, 1)
+#Highlight2 <- tail(regression_points, 5)
+
+
+```
+```{r}
+ggplot(evals_ch6, aes(x = age, y = score, color = gender)) +
+  geom_point() +
+ # geom_point(data = Highlight ,aes(x = age, y = score, size = 1)) +
+  geom_point(x = 36, y = 4.24, color = "Coral2", size = 3) +
+  geom_point(x = 59, y = 4.20, color = "Cyan3", size = 3) +
+  labs(x = "Age", y = "Teaching Score", color = "Gender") +
+  geom_smooth(method = "lm", se = FALSE) +
+  geom_vline(xintercept = 36, col = "Coral2", lwd = 1, lty = 2) +
+  geom_vline(xintercept = 59, col = "Cyan3", lwd = 1, lty = 2)
+```
+```{r, include=FALSE}
+# the sites that I've looked into:
+# https://cmdlinetips.com/2019/05/how-to-highlight-select-data-points-with-ggplot2-in-r/
+# https://stackoverflow.com/questions/32780047/highlight-few-points-in-plot
+# https://www.youtube.com/watch?v=XR8mmzCCuNY
+# https://stat.ethz.ch/R-manual/R-devel/library/graphics/html/abline.html
+# http://www.stat.columbia.edu/~tzheng/files/Rcolor.pdf
+#https://www.datamentor.io/r-programming/subplot/
+# https://ggplot2.tidyverse.org/reference/geom_abline.html
+# https://stackoverflow.com/questions/53356987/ggplot2-adding-points-at-the-intersection-of-two-lines
+# https://stackoverflow.com/questions/37115276/control-alignment-of-two-side-by-side-plots-in-knitr
+# and so so many more haha this last one got me, I made it harder than it needed to be.
+```
+

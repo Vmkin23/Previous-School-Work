@@ -1,0 +1,72 @@
+---
+title: "TE#12"
+author: "Victoria Kincaid"
+date: "11/12/2021"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(moderndive)
+library(infer)
+
+evals_ch5 <- evals %>%
+  select(ID, score, bty_avg, age)
+glimpse(evals_ch5)
+
+ggplot(evals_ch5, aes(x = bty_avg, y = score)) +
+  geom_point() +
+  labs(x = "looker score", y = "teachin' score", 
+       title = "Relationship between if teachin' and beauty scores") +
+  geom_smooth(method = "lm", se = FALSE)
+
+score_model <- lm(score ~ bty_avg, data = evals_ch5)
+
+get_regression_table(score_model)
+
+score_model <- lm(score ~ bty_avg, data = evals_ch5)
+
+regression_points <- get_regression_points(score_model)
+
+regression_points
+
+evals %>%
+  select(ID, prof_ID, score, bty_avg)
+
+ggplot(regression_points, aes(x = residual)) +
+  geom_histogram(binwidth = 0.25, color = "white") +
+  labs(x = "Residual")
+
+ggplot(regression_points, aes(x = bty_avg, y = residual)) +
+  geom_point() +
+  labs(x = "Beauty Score", y = "Residual") +
+  geom_hline(yintercept = 0, col = "blue", size = 1)
+```
+
+I am gonna do the same as before with score_model, only instead of regressing on bty_avg I'm regressing on age
+
+```{r}
+score_model_age <- lm(score ~ age, data = evals_ch5)
+
+regression_points_age <- get_regression_points(score_model_age)
+regression_points_age
+
+ggplot(evals_ch5, aes(x = age, y = score)) +
+  geom_point() +
+  labs(x = "age", y = "teaching score", 
+       title = "Relationship between age and teaching scores") +
+  geom_smooth(method = "lm", se = FALSE)
+
+ggplot(regression_points_age, aes(x = residual)) +
+  geom_histogram(binwidth = 0.25, color = "white") +
+  labs(x = "Residual")
+
+ggplot(regression_points_age, aes(x = age, y = residual)) +
+  geom_point() +
+  labs(x = "Age", y = "Residual") +
+  geom_hline(yintercept = 0, col = "blue", size = 1)
+```
+
+
+I simply took the previous examples in the textbook and substituted in age for beauty score, with these visuals I can determine that it is a linear and normal distribution. 

@@ -1,0 +1,31 @@
+---
+title: 'TE #5'
+author: "Victoria Kincaid"
+date: "9/24/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(tidyr)
+library(nycflights13)
+library(fivethirtyeight)
+```
+
+```{r fivethirtyeight, echo=FALSE}
+drinks_smaller <- drinks %>%
+  filter(country %in% c("China", "Italy", "Saudi Arabia", "USA")) %>%
+  select(-total_litres_of_pure_alcohol)%>%
+  rename(Beer = beer_servings, Spirit = spirit_servings, Wine = wine_servings)
+
+drinks_smaller_tidy <- drinks_smaller %>%
+  pivot_longer(names_to = "type",
+                values_to = "servings",
+                cols = -country)
+
+ggplot(drinks_smaller_tidy, aes(x = country, y = servings, fill = type))+
+  geom_col(position = "dodge")
+```

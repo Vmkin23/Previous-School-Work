@@ -1,0 +1,81 @@
+---
+title: 'CA #5'
+author: "Victoria Kincaid"
+date: "9/24/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(tidyr)
+library(nycflights13)
+library(fivethirtyeight)
+library(scales)
+```
+
+```{r, echo=FALSE}
+
+# Stock_pricesNT <- matrix(c(173.55,174.90,174.34,172.61,171.42,170.04), ncol = 3, byrow = TRUE)
+#   colnames(Stock_pricesNT) <- c("Boeing Stock Price", "Amazon Stock Price", "Google Stock Price")
+#   rownames(Stock_pricesNT) <- c("2009-01-01", "2009-01-02")
+#   Stock_pricesNT <- as.table(Stock_pricesNT)
+# Stock_pricesNT
+# 
+# 
+# Stock_pricesT <- Stock_pricesNT %>%
+#   pivot_longer(names_to = "Stock Name",
+#                values_to = "Stock Price",)
+# ```
+# THIS DID NOT WORK SO ATTEMPTING TO IMPORT
+```
+
+Table 4.1
+```{r}
+library(readxl)
+Table4_1 <- read_excel("ca5scrap.xlsx")
+format(Table4_1, nsmall = 2)
+
+knitr::kable(tibble::data_frame(Table4_1))
+```
+
+
+Table 4.2
+```{r}
+Table4_2 <- Table4_1 %>%
+    rename(Boeing = `Boeing stock price`, Amazon = `Amazon stock price`, Google = `Google stock price`) %>%
+    pivot_longer(names_to = "Stock Name", 
+               values_to = "Stock Price", 
+               cols = -Date)
+format(Table4_2, nsmall = 2)
+
+knitr::kable(tibble::data_frame(Table4_2))
+```
+
+
+Table 4.3
+```{r}
+Weather <- c("Sunny", "Overcast")
+
+Table4_3 <- Table4_1 %>%
+  select(Date, `Boeing stock price`) %>%
+  rename('Boeing Price' = `Boeing stock price`)
+
+Table4_3$new_col <- Weather
+
+names(Table4_3)[3] <- 'Weather'
+
+format(Table4_3, nsmall = 2)
+
+knitr::kable(tibble::data_frame(Table4_3))
+```
+
+
+```{r}
+# Shoutout to 
+# https://github.com/yihui/knitr/issues/1606
+# for figuring out why my NUM in R were becoming DBL when knitting
+```
+

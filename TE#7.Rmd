@@ -1,0 +1,46 @@
+---
+title: "TE#7"
+author: "Victoria Kincaid"
+date: "10/9/2021"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(moderndive)
+library(skimr)
+library(gapminder)
+
+```
+
+```{r, include=FALSE}
+gapminder2007 <- gapminder %>%
+  filter(year == 2007) %>%
+  select(country, lifeExp, continent, gdpPercap)
+
+glimpse(gapminder2007)
+
+gapminder2007 %>% sample_n(size = 5)
+
+gapminder2007 %>% select(lifeExp, continent) %>% skim()
+```
+
+Figure 5.8: Life Expectancy in the year 2007.
+```{r}
+ggplot(gapminder2007, aes(x = lifeExp)) +
+  geom_histogram(binwidth = 5, color = "white") +
+  labs( x= "Life Expectancy", y = "# of countries",
+        title = "Histogram of distribution of worldwide life expectancies") +
+facet_wrap(~ continent, nrow = 2)
+
+```
+
+Figure 5.9: Life expectancy in 2007, boxplot remix
+
+```{r}
+ggplot(gapminder2007, aes(x = continent, y = lifeExp))+
+  geom_boxplot() +
+  labs(x = "Continent", y = "Life expectancy",
+       title = "Life expectancy by continent")
+```
+
