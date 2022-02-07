@@ -2,4 +2,4 @@
 Previous Work Done for School
 
 
-This is a final project from old R coursework, mostly showcasing my learned skills of displaying data.
+This is previous classwork with R. It is my favorite language to use so far. 
