@@ -1,0 +1,746 @@
+---
+title: "Clients Services"
+author: "Victoria Kincaid"
+date: "3/21/2022"
+output: html_document
+---
+
+Client Services: 
+Context: All of our contact records have Created Dates signifying when they first entered into the Hire Heroes USA system, but all clients have a Client Type and Client Category. These individuals are also identified with the Client field. Client Types of Online Registrant, Onward to Opportunity, and AVR are considered part of our PaCT program. Nearly all of these clients registered through one of our registration portals. AVRs (Attempted Veteran Registrants) were not selected for assignment and were sent messaging encouraging them to register again. If selected, they then become Online Registrants. Thus, Client Type just denotes a current status. Current (and former) AVRs are identified by the AVR field.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+library(parsedate)
+library(gridExtra)
+library(knitr)
+library(DT)
+library(scales)
+library(plyr)
+
+
+EmployerProfile <- readxl::read_xlsx("D:/School Schtuff/Current Semester/Spring 2022/BAS 270/Data/EPO_Teradata_Employer_Profile_Creation_Report.xlsx")
+SeekerProfile <- readxl::read_xlsx("D:/School Schtuff/Current Semester/Spring 2022/BAS 270/Data/EPO_Teradata_Job Seeker_Profile_Creation_Report.xlsx")
+JobBoardSales <- readxl::read_xlsx("D:/School Schtuff/Current Semester/Spring 2022/BAS 270/Data/EPO_Teradata_Job_Board_Sales_Report.xlsx")
+
+Feedback <- read.csv("D:/School Schtuff/Current Semester/Spring 2022/BAS 270/Data/Feedback__c.csv")
+Campaign <- read.csv("D:/School Schtuff/Current Semester/Spring 2022/BAS 270/Data/Campaign.csv")
+EmailHistoryContact <- read.csv("D:/School Schtuff/Current Semester/Spring 2022/BAS 270/Data/vr__VR_Email_History_Contact__c.csv")
+
+SF2018Activities <- read.csv("D:/School Schtuff/Current Semester/Spring 2022/BAS 270/Data/SalesForce_2018Activities.csv")
+SFAcct <- read.csv("D:/School Schtuff/Current Semester/Spring 2022/BAS 270/Data/SalesForce_Account.csv")
+SFCase <- read.csv("D:/School Schtuff/Current Semester/Spring 2022/BAS 270/Data/SalesForce_Case.csv")
+SFContact <- read.csv("D:/School Schtuff/Current Semester/Spring 2022/BAS 270/Data/SF_Contact.csv")
+SFHI <- read.csv("D:/School Schtuff/Current Semester/Spring 2022/BAS 270/Data/SalesForce_Hire_Information__c.csv")
+SFOpportunity <- read.csv("D:/School Schtuff/Current Semester/Spring 2022/BAS 270/Data/SalesForce_Opportunity.csv")
+SFRecordType <- read.csv("D:/School Schtuff/Current Semester/Spring 2022/BAS 270/Data/SalesForce_RecordType.csv")
+
+```
+Q: Is there any relationship between the amount of time spent working with individual clients 
+(time to complete an assessment, time to complete resume, # of logged activities, etc.) and how quickly they are employed?
+p.150, p.148 for appendix (will use for volunteer questions)
+
+```{r}
+###important!!!************************************************************
+#which( colnames(Hire_Contact_Join) == "Confirmed_Hired_Date__c" )
+
+#grep("Date", colnames(NarrowedACJ)) #jajaja
+###########################################
+Activities_Contact_Join <- left_join(SFContact, SF2018Activities, by = c("Id" = "WHOID"))
+NarrowedACJ <- Activities_Contact_Join[,c(1,29,200:217,223:231,247,293,303,309,396,400,404,406,414,415,430:435,437:441)]
+
+Hire_Contact_Join <- left_join(SFContact, SFHI, by = c("Id" = "Client_Name__c"))
+NarrowedHCJ <- Hire_Contact_Join[,c(1,50,57,69,256,265,300,321,388,13,240,401)]
+
+## Check what pulls up from CSV, sometimes it don't stick :/ adjust accordingly
+strptime(NarrowedHCJ$Date_Turned_Black__c, format = "%Y-%m-%d")
+strptime(NarrowedHCJ$Date_turned_grey__c, format = "%m/%d/%Y")
+strptime(NarrowedHCJ$Dat_Initial_Assessment_was_Completed__c, format = "%m/%d/%Y")
+strptime(NarrowedHCJ$Confirmed_Hired_Date__c.y, format = "%Y-%m-%d")
+
+NarrowedHCJ <- NarrowedHCJ %>% mutate(Dat_Initial_Assessment_was_Completed__c = mdy(Dat_Initial_Assessment_was_Completed__c))
+NarrowedHCJ <- NarrowedHCJ %>% mutate(Confirmed_Hired_Date__c.y = ymd(Confirmed_Hired_Date__c.y))
+NarrowedHCJ <- NarrowedHCJ %>% mutate(Date_Turned_Black__c = ymd(Date_Turned_Black__c))
+NarrowedHCJ <- NarrowedHCJ %>% mutate(Date_turned_grey__c = mdy(Date_turned_grey__c))
+
+NarrowedHCJ["Days_in_Program"] <- NA
+
+for (i in 1:nrow(NarrowedHCJ)){
+  if (NarrowedHCJ[i,"Active_Color__c"] == "Black") {
+    NarrowedHCJ[i,"Days_in_Program"] <- difftime(NarrowedHCJ[i, "Date_Turned_Black__c"] , NarrowedHCJ[i,"Dat_Initial_Assessment_was_Completed__c"], units="days")
+  }
+  else if (NarrowedHCJ[i,"Active_Color__c"] == "Grey") {
+    NarrowedHCJ[i,"Days_in_Program"] <- difftime(NarrowedHCJ[i, "Date_turned_grey__c"] , NarrowedHCJ[i,"Dat_Initial_Assessment_was_Completed__c"], units="days")
+  }
+  else if (NarrowedHCJ[i,"Active_Color__c"] == "Blue") {
+    NarrowedHCJ[i,"Days_in_Program"] <- difftime(NarrowedHCJ[i, "Confirmed_Hired_Date__c.y"] , NarrowedHCJ[i,"Dat_Initial_Assessment_was_Completed__c"], units="days")
+  }
+  else if (NarrowedHCJ[i,"Active_Color__c"] == "Green" | NarrowedHCJ[i,"Active_Color__c"] == "Purple" | NarrowedHCJ[i,"Active_Color__c"] =="Red") {
+    NarrowedHCJ[i,"Days_in_Program"] <- difftime(as.POSIXct("2019-3-1", format = "%Y-%m-%d", tz = "") , NarrowedHCJ[i,"Dat_Initial_Assessment_was_Completed__c"], units="days")
+  }
+  else {
+    NarrowedHCJ[i,"Days_in_Program"] <- NA
+  }
+}
+
+HiredDays <- NarrowedHCJ %>% filter(!is.na(NarrowedHCJ$Days_in_Program)) # WINNER WINNER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+HiredDays <- NarrowedHCJ %>% filter(!is.na(NarrowedHCJ$Confirmed_Hired_Date__c.y))
+
+HiredDays <- HiredDays[,c(1,4,10:13)]
+
+######################################
+
+Active <- NarrowedACJ %>% select(c(1,3,4,8,9,11,12,7,21)) %>% filter(MyTrak_1_on_1_Career_Coaching_Request__c == 1 | MyTrak_Federal_Resume_Review__c == 1 | MyTrak_Mock_Interview_Request__c == 1 | MyTrak_Essentials_Complete__c == 1)
+
+NotActive <- NarrowedACJ %>% select(c(1,3,4,8,9,11,12,7,21)) %>% filter(MyTrak_1_on_1_Career_Coaching_Request__c == 0 & MyTrak_Federal_Resume_Review__c == 0 & MyTrak_Mock_Interview_Request__c == 0 & MyTrak_Essentials_Complete__c == 0)
+
+CareerCoachingRequest <- Active %>% select(c(1:3)) %>% filter(MyTrak_1_on_1_Career_Coaching_Request__c == 1)
+CareerCoachingRequest <- CareerCoachingRequest[!duplicated(CareerCoachingRequest), ]
+Hired_Career <- left_join(HiredDays, CareerCoachingRequest, by = c("Id" = "Id"))
+Hired_Career <- Hired_Career  %>% filter(!is.na(Hired_Career$MyTrak_1_on_1_Request_Date__c))
+Hired_Career <- Hired_Career %>% filter(!is.na(Hired_Career$Days_in_Program))
+mean(Hired_Career$Days_in_Program) #150.6176
+
+# # wait wait am I making this too complicated
+# 
+# Active <- Active[!duplicated(Active), ]
+# ActiveParticpants <- left_join(HiredDays, Active, by = c("Id" = "Id"))
+# ActiveParticpants <- ActiveParticpants %>% filter(!is.na(ActiveParticpants$Days_in_Program))
+# mean(ActiveParticpants$Days_in_Program) #232.5269
+# 
+NotActive <- NotActive[!duplicated(NotActive), ]
+NotActiveParticpants <- left_join(HiredDays, NotActive, by = c("Id" = "Id"))
+NotActiveParticpants <- NotActiveParticpants %>% filter(!is.na(NotActiveParticpants$Days_in_Program))
+MeanNA <- mean(NotActiveParticpants$Days_in_Program) #232.5269
+# 
+# #hmmmmmmmm  my brain hurts so we are going to just keep doing it the other way
+
+
+
+FedResume <- Active %>% select(c(1,4,5)) %>% filter(MyTrak_Federal_Resume_Review__c == 1)
+FedResume <- FedResume[!duplicated(FedResume), ]
+Hired_Fed <- left_join(HiredDays, FedResume, by = c("Id" = "Id"))
+Hired_Fed <- Hired_Fed  %>% filter(!is.na(Hired_Fed$MyTrak_Federal_Resume_Review__c))
+Hired_Fed <- Hired_Fed %>% filter(!is.na(Hired_Fed$Days_in_Program))
+MeanHF <- mean(Hired_Fed$Days_in_Program)  #170.737
+
+MockInterview <- Active %>% select(c(1,6,7)) %>% filter(MyTrak_Mock_Interview_Request__c == 1)
+MockInterview <- MockInterview[!duplicated(MockInterview), ]
+Hired_Mock <- left_join(HiredDays, MockInterview, by = c("Id" = "Id"))
+Hired_Mock <- Hired_Mock  %>% filter(!is.na(Hired_Mock$MyTrak_Mock_Interview_Request__c))
+Hired_Mock <- Hired_Mock %>% filter(!is.na(Hired_Mock$Days_in_Program))
+MeanHM <- mean(Hired_Mock$Days_in_Program)  #155.2333
+
+Essentials <- Active %>% select(c(1,8,9)) %>% filter(MyTrak_Essentials_Complete__c == 1)
+Essentials <- Essentials[!duplicated(Essentials), ]
+Hired_Ess <- left_join(HiredDays, Essentials, by = c("Id" = "Id"))
+Hired_Ess <- Hired_Ess  %>% filter(!is.na(Hired_Ess$MyTrak_Essentials_Complete__c))
+Hired_Ess <- Hired_Ess %>% filter(!is.na(Hired_Ess$Days_in_Program))
+MeanHE <- mean(Hired_Ess$Days_in_Program)  #152.755
+
+All3 <- Active %>% filter(MyTrak_1_on_1_Career_Coaching_Request__c == 1 & MyTrak_Federal_Resume_Review__c == 1 & MyTrak_Mock_Interview_Request__c == 1 & MyTrak_Essentials_Complete__c == 1)
+All3 <- All3[!duplicated(All3), ]
+Hired_3 <- left_join(HiredDays, All3, by = c("Id" = "Id"))
+Hired_3 <- Hired_3  %>% filter(!is.na(Hired_3$MyTrak_Essentials_Complete__c))
+Hired_3 <- Hired_3  %>% filter(!is.na(Hired_3$MyTrak_Mock_Interview_Request__c))
+Hired_3 <- Hired_3  %>% filter(!is.na(Hired_3$MyTrak_Federal_Resume_Review__c)) 
+Hired_3 <- Hired_3  %>% filter(!is.na(Hired_3$MyTrak_1_on_1_Career_Coaching_Request__c)) 
+
+Hired_3 <- Hired_3 %>% filter(!is.na(Hired_3$Days_in_Program))
+MeanH3 <- mean(Hired_3$Days_in_Program)  #160.3889
+
+
+
+# The time spent with clients the faster they seem to find employment. For instance, the average client that finds employment is within 233 days, but if they were to file an essentials about them their average time employment within 153 days, if they were to participate in a mock interview they on average will find employment within 156 days, and if they were to have a federal resume reviewed they would on average find employment within 171 days. If a candidate were to do all three activities they would be hired within average of 160 days which is 73 days earlier than candidates that did not participate in any of the three activities. So, candidates that participated in more activities with HHUSA would have better chances than candidates that did not participate. 
+
+
+```
+
+Q: Is there a relationship between a client's demographic profile (rank, branch, time in service, spouse status etc.) and 
+when that client registers for services?
+p.67
+
+```{r}
+# We will need to look at our HCJ and ACJ and combine the two, this time pulling different variables from HCJ
+###important!!!************************************************************
+which( colnames(Hire_Contact_Join) == "Disability_percentage_60_or_above__c" )
+
+grep("Branch", colnames(Hire_Contact_Join))
+
+Hire_Contact_Join$Disability_percentage_60_or_above__c
+summary(as.factor(Hire_Contact_Join$Disability_percentage_60_or_above__c))
+####################################################
+
+DemographicHire <- Hire_Contact_Join[,c(1,69,184,108,321,25,26,4,6,303)]
+RegisterServices <- NarrowedACJ %>% select(c(1,3,4,8,9,11,12,7,21))
+
+##### Coaching
+
+CoachingRequest <- RegisterServices %>% select(c(1:3))
+DemographicCoaching <- left_join(DemographicHire, CoachingRequest, by = c("Id" = "Id"))
+DemographicCoaching <- DemographicCoaching[!duplicated(DemographicCoaching), ]
+# remember to check what it looks like before stripping and mutating time
+strptime(DemographicCoaching$MyTrak_1_on_1_Request_Date__c, format = "%m/%d/%Y")
+DemographicCoaching <- DemographicCoaching %>% mutate(MyTrak_1_on_1_Request_Date__c = mdy(MyTrak_1_on_1_Request_Date__c))
+
+strptime(DemographicCoaching$Dat_Initial_Assessment_was_Completed__c, format = "%m/%d/%Y")
+DemographicCoaching <- DemographicCoaching %>% mutate(Dat_Initial_Assessment_was_Completed__c = mdy(Dat_Initial_Assessment_was_Completed__c))
+        
+DemographicCoaching <- DemographicCoaching %>% filter(!is.na(DemographicCoaching$MyTrak_1_on_1_Request_Date__c))
+
+DemographicCoaching["Days_to_Request"] <- difftime(DemographicCoaching$MyTrak_1_on_1_Request_Date__c , DemographicCoaching$Dat_Initial_Assessment_was_Completed__c, units = "days")
+
+DemographicCoaching <- DemographicCoaching %>% filter(!is.na(DemographicCoaching$Dat_Initial_Assessment_was_Completed__c))
+DemographicCoaching <- filter(DemographicCoaching, Days_to_Request < 712 & Days_to_Request > 0)
+
+UDC <- DemographicCoaching[,c(1,3:9,13)]
+
+# UDC <- UDC %>% 
+#     mutate_all(~ifelse(. %in% c("N/A", "null", ""), NA, .)) %>% 
+#     na.omit()
+
+UDCGraph <- UDC %>%
+  group_by(Service_Branch__c, Service_Rank__c, Military_Spouse_Caregiver__c, Gender__c, Race__c, MailingState, MailingCountry) %>%
+  summarise_at(vars(Days_to_Request), list(Average_Days_to_Request = mean))
+
+
+ggplot(data = UDCGraph) + 
+  geom_bar(mapping = aes(x = Military_Spouse_Caregiver__c, y = Average_Days_to_Request, fill = Military_Spouse_Caregiver__c), stat = "summary", fun = "mean") + ggtitle("1 on 1 Coaching")
+
+
+#### Resume
+
+FedResume <- RegisterServices %>% select(c(1,4,5))
+DemographicFedResume <- left_join(DemographicHire, FedResume, by = c("Id" = "Id"))
+DemographicFedResume <- DemographicFedResume[!duplicated(DemographicFedResume), ]
+
+strptime(DemographicFedResume$MyTrak_Fed_Resume_Review_Request_Date__c, format = "%m/%d/%Y")
+DemographicFedResume <- DemographicFedResume %>% mutate(MyTrak_Fed_Resume_Review_Request_Date__c = mdy(MyTrak_Fed_Resume_Review_Request_Date__c))
+
+strptime(DemographicFedResume$Dat_Initial_Assessment_was_Completed__c, format = "%m/%d/%Y")
+DemographicFedResume <- DemographicFedResume %>% mutate(Dat_Initial_Assessment_was_Completed__c = mdy(Dat_Initial_Assessment_was_Completed__c))
+        
+DemographicFedResume <- DemographicFedResume %>% filter(!is.na(DemographicFedResume$MyTrak_Fed_Resume_Review_Request_Date__c))
+
+DemographicFedResume["Days_to_Request"] <- difftime(DemographicFedResume$MyTrak_Fed_Resume_Review_Request_Date__c , DemographicFedResume$Dat_Initial_Assessment_was_Completed__c, units = "days")
+
+DemographicFedResume <- DemographicFedResume %>% filter(!is.na(DemographicFedResume$Dat_Initial_Assessment_was_Completed__c))
+DemographicFedResume <- filter(DemographicFedResume, Days_to_Request < 712 & Days_to_Request > 0)
+
+UDF <- DemographicFedResume[,c(1,3:9,13)]
+
+# UDF <- UDF %>% 
+#     mutate_all(~ifelse(. %in% c("N/A", "null", ""), NA, .)) %>% 
+#     na.omit()
+
+UDFGraph <- UDF %>%
+  group_by(Service_Branch__c, Service_Rank__c, Military_Spouse_Caregiver__c, Gender__c, Race__c, MailingState, MailingCountry) %>%
+  summarise_at(vars(Days_to_Request), list(Average_Days_to_Request = mean))
+
+
+ggplot(data = UDFGraph) + 
+  geom_bar(mapping = aes(x = Service_Branch__c, y = Average_Days_to_Request), stat = "summary", fun = "mean") + ggtitle("Federal Resume Review")
+
+#### Mock Request
+
+MockRequest <- RegisterServices %>% select(c(1,6,7))
+DemographicMock <- left_join(DemographicHire, MockRequest, by = c("Id" = "Id"))
+DemographicMock <- DemographicMock[!duplicated(DemographicMock), ]
+
+strptime(DemographicMock$MyTrak_Mock_Inteview_Request_Date__c, format = "%m/%d/%Y")
+DemographicMock <- DemographicMock %>% mutate(MyTrak_Mock_Inteview_Request_Date__c = mdy(MyTrak_Mock_Inteview_Request_Date__c))
+
+strptime(DemographicMock$Dat_Initial_Assessment_was_Completed__c, format = "%m/%d/%Y")
+DemographicMock <- DemographicMock %>% mutate(Dat_Initial_Assessment_was_Completed__c = mdy(Dat_Initial_Assessment_was_Completed__c))
+        
+DemographicMock <- DemographicMock %>% filter(!is.na(DemographicMock$MyTrak_Mock_Inteview_Request_Date__c))
+
+DemographicMock["Days_to_Request"] <- difftime(DemographicMock$MyTrak_Mock_Inteview_Request_Date__c , DemographicMock$Dat_Initial_Assessment_was_Completed__c, units = "days")
+
+DemographicMock <- DemographicMock %>% filter(!is.na(DemographicMock$Dat_Initial_Assessment_was_Completed__c))
+DemographicMock <- filter(DemographicMock, Days_to_Request < 712 & Days_to_Request > 0)
+
+UDM <- DemographicMock[,c(1,3:9,13)]
+
+# UDM <- UDM %>% 
+#     mutate_all(~ifelse(. %in% c("N/A", "null", ""), NA, .)) %>% 
+#     na.omit()
+
+UDMGraph <- UDM %>%
+  group_by(Service_Branch__c, Service_Rank__c, Military_Spouse_Caregiver__c, Gender__c, Race__c, MailingState, MailingCountry) %>%
+  summarise_at(vars(Days_to_Request), list(Average_Days_to_Request = mean))
+
+
+ggplot(data = UDMGraph) + 
+  geom_bar(mapping = aes(x = Service_Branch__c, y = Average_Days_to_Request), stat = "summary", fun = "mean") + ggtitle("Mock Interview")
+
+
+#### Essentials
+
+EssRequest <- RegisterServices %>% select(c(1,8,9))
+DemographicEss <- left_join(DemographicHire, EssRequest, by = c("Id" = "Id"))
+DemographicEss <- DemographicEss[!duplicated(DemographicEss), ]
+
+strptime(DemographicEss$MyTrak_Essentials_Completed_Date__c, format = "%m/%d/%Y")
+DemographicEss <- DemographicEss %>% mutate(MyTrak_Essentials_Completed_Date__c = mdy(MyTrak_Essentials_Completed_Date__c))
+
+strptime(DemographicEss$Dat_Initial_Assessment_was_Completed__c, format = "%m/%d/%Y")
+DemographicEss <- DemographicEss %>% mutate(Dat_Initial_Assessment_was_Completed__c = mdy(Dat_Initial_Assessment_was_Completed__c))
+        
+DemographicEss <- DemographicEss %>% filter(!is.na(DemographicEss$MyTrak_Essentials_Completed_Date__c))
+
+DemographicEss["Days_to_Request"] <- difftime(DemographicEss$MyTrak_Essentials_Completed_Date__c , DemographicEss$Dat_Initial_Assessment_was_Completed__c, units = "days")
+
+DemographicEss <- DemographicEss %>% filter(!is.na(DemographicEss$Dat_Initial_Assessment_was_Completed__c))
+DemographicEss <- filter(DemographicEss, Days_to_Request < 712 & Days_to_Request > 0)
+
+# Demographics Essentials Graph
+# UDE <- DemographicEss %>% 
+#     mutate_all(~ifelse(. %in% c("N/A", "null", ""), NA, .)) %>% 
+#     na.omit()
+
+UDEGraph <- UDE %>%
+  group_by(Service_Branch__c, Service_Rank__c, Military_Spouse_Caregiver__c, Gender__c, Race__c, MailingState, MailingCountry) %>%
+  summarise_at(vars(Days_to_Request), list(Average_Days_to_Request = mean))
+
+
+ggplot(data = UDEGraph) + 
+  geom_bar(mapping = aes(x = Race__c, y = Average_Days_to_Request), stat = "summary", fun = "mean") + ggtitle("Essentials")
+
+### TIME TO PULL OUT THE GRAPHS BY DEMOGRAPHIC
+
+## BRANCH
+
+#par(mfrow=c(2,2))
+
+UDCBRANCH <- ggplot(data = UDCGraph) + 
+  geom_bar(mapping = aes(x = Service_Branch__c, y = Average_Days_to_Request, fill = Service_Branch__c), stat = "summary", fun = "mean", show.legend = F) + 
+  ggtitle("1 on 1 Coaching") +
+  labs(x = "Service Branch", y = "Average Days to Request")
+
+UDFBRANCH <- ggplot(data = UDFGraph) + 
+  geom_bar(mapping = aes(x = Service_Branch__c, y = Average_Days_to_Request, fill = Service_Branch__c), stat = "summary", fun = "mean", show.legend = F) + ggtitle("Federal Resume Review")+
+  labs(x = "Service Branch", y = "Average Days to Request")
+
+UDMBRANCH <- ggplot(data = UDMGraph) + 
+  geom_bar(mapping = aes(x = Service_Branch__c, y = Average_Days_to_Request, fill = Service_Branch__c), stat = "summary", fun = "mean", show.legend = F) + ggtitle("Mock Interview") +
+  labs(x = "Service Branch", y = "Average Days to Request")
+
+UDEBRANCH <- ggplot(data = UDEGraph) + 
+  geom_bar(mapping = aes(x = Service_Branch__c, y = Average_Days_to_Request, fill = Service_Branch__c), stat = "summary", fun = "mean", show.legend = F) + ggtitle("Essentials")+
+  labs(x = "Service Branch", y = "Average Days to Request")
+
+grid.arrange(UDCBRANCH, UDFBRANCH, UDMBRANCH, UDEBRANCH, ncol = 2)
+
+
+## RANK
+
+UDCRANK <- ggplot(data = UDCGraph) + 
+  geom_bar(mapping = aes(x = Service_Rank__c, y = Average_Days_to_Request, fill = Service_Rank__c), stat = "summary", fun = "mean", show.legend = F) + 
+  ggtitle("1 on 1 Coaching") +
+  labs(x = "Service Rank", y = "Average Days to Request")
+
+UDFRANK <- ggplot(data = UDFGraph) + 
+  geom_bar(mapping = aes(x = Service_Rank__c, y = Average_Days_to_Request, fill = Service_Rank__c), stat = "summary", fun = "mean", show.legend = F) + ggtitle("Federal Resume Review") +
+  labs(x = "Service Rank", y = "Average Days to Request")
+
+UDMRANK <- ggplot(data = UDMGraph) + 
+  geom_bar(mapping = aes(x = Service_Rank__c, y = Average_Days_to_Request, fill = Service_Rank__c), stat = "summary", fun = "mean", show.legend = F) + ggtitle("Mock Interview") +
+  labs(x = "Service Rank", y = "Average Days to Request")
+
+UDERANK <- ggplot(data = UDEGraph) + 
+  geom_bar(mapping = aes(x = Service_Rank__c, y = Average_Days_to_Request, fill = Service_Rank__c), stat = "summary", fun = "mean", show.legend = F) + ggtitle("Essentials")+
+  labs(x = "Service Rank", y = "Average Days to Request")
+
+grid.arrange(UDCRANK, UDFRANK, UDMRANK, UDERANK, ncol = 2)
+
+## SPOUSE
+
+UDCSPOUSE <- ggplot(data = UDCGraph) + 
+  geom_bar(mapping = aes(x = Military_Spouse_Caregiver__c, y = Average_Days_to_Request, fill = Military_Spouse_Caregiver__c), stat = "summary", fun = "mean") + ggtitle("1 on 1 Coaching") + labs(x = "Veteran or Spouse", y = "Average Days to Request") + theme(legend.position="none")
+
+UDFSPOUSE <- ggplot(data = UDFGraph) + 
+  geom_bar(mapping = aes(x = Military_Spouse_Caregiver__c, y = Average_Days_to_Request, fill = Military_Spouse_Caregiver__c), stat = "summary", fun = "mean") + ggtitle("Federal Resume Review") + labs(x = "Veteran or Spouse", y = "Average Days to Request") + theme(legend.position="none")
+
+UDMSPOUSE <- ggplot(data = UDMGraph) + 
+  geom_bar(mapping = aes(x = Military_Spouse_Caregiver__c, y = Average_Days_to_Request, fill = Military_Spouse_Caregiver__c), stat = "summary", fun = "mean") + ggtitle("Mock Interview") + labs(x = "Veteran or Spouse", y = "Average Days to Request") + theme(legend.position="none")
+
+UDESPOUSE <- ggplot(data = UDEGraph) + 
+  geom_bar(mapping = aes(x = Military_Spouse_Caregiver__c, y = Average_Days_to_Request, fill = Military_Spouse_Caregiver__c), stat = "summary") + ggtitle("Essentials")
+
+grid.arrange(UDCSPOUSE, UDFSPOUSE, UDMSPOUSE, ncol = 2)
+
+## MAILING STATE
+
+UDCGraph <- filter(UDCGraph, MailingState %in% c("AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY","DC","PR"))
+
+UDFGraph <- filter(UDFGraph, MailingState %in% c("AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY","DC","PR"))
+
+UDMGraph <- filter(UDMGraph, MailingState %in% c("AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY","DC","PR"))
+
+UDEGraph <- filter(UDEGraph, MailingState %in% c("AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY","DC","PR"))
+
+summary(as.factor(UDMGraph$MailingState))
+
+UDCSTATE <- ggplot(data = UDCGraph) + 
+  geom_bar(mapping = aes(x = MailingState, y = Average_Days_to_Request, fill = MailingState), stat = "summary", fun = "mean") + ggtitle("1 on 1 Coaching")
+
+UDFSTATE <- ggplot(data = UDFGraph) + 
+  geom_bar(mapping = aes(x = MailingState, y = Average_Days_to_Request, fill = MailingState), stat = "summary", fun = "mean") + ggtitle("Federal Resume Review")
+
+UDMSTATE <- ggplot(data = UDMGraph) + 
+  geom_bar(mapping = aes(x = MailingState, y = Average_Days_to_Request, fill = MailingState), stat = "summary", fun = "mean") + ggtitle("Mock Interview")
+
+UDESTATE <- ggplot(data = UDEGraph) + 
+  geom_bar(mapping = aes(x = MailingState, y = Average_Days_to_Request, fill = MailingState), stat = "summary", fun = "mean") + ggtitle("Essentials")
+
+grid.arrange(UDCSTATE, UDFSTATE, UDMSTATE, UDESTATE, ncol = 2)
+
+UDCSTATE
+UDFSTATE
+UDMSTATE
+UDESTATE
+
+# ggplot(UDCGraph, aes(MailingState, Average_Days_to_Request, fun = "mean")) + 
+#   geom_bar( stat = "summary") +
+#   ggtitle("1 on 1 Coaching") +
+#   theme(legend.position = "none") +
+#   scale_y_continuous(labels = comma)
+
+UDMGraphTest <- UDMGraph %>% 
+  group_by(MailingState) %>% # Variable to be transformed
+  count() %>% 
+  ungroup() %>% 
+  mutate(perc = `n` / sum(`n`)) %>% 
+  arrange(perc) %>%
+  mutate(labels = scales::percent(perc))
+
+ggplot(UDMGraphTest, aes(x = "", y = perc, fill = MailingState)) +
+  geom_col() +
+  geom_text(aes(label = labels),
+            position = position_stack(vjust = 0.5)) +
+  coord_polar(theta = "y")
+
+# Looking at the graphs we see that the air force typically will register earlier for services than the army. We will also see that veteran officers file earlier than veterans that are enlisted. None labeled as spouses participated in the four offerings and were labeled successfully employed. And geographically clients in AK,AZ,CO,CT,GA,HI,ID,IL,KS,KY,LA,MA,MS,NC,NM,NV,NY,SC,TN,UT,WY filed earlier than clients in AR,CA,IA,MO,OH,OR.
+
+# rank, branch, time in service, spouse status etc.
+
+```
+
+Q: Is there a relationship between a client's demographic profile (rank, branch, time in service, spouse status etc.) and
+a client's likelihood to complete a survey? 
+
+```{r}
+###important!!!************************************************************
+which( colnames(Hire_Contact_Join) == "Confirmed_Hired_Date__c" )
+
+grep("Survey", colnames(SFContact)) #jajaja
+
+summary(as.factor(SFContact$Date_Assigned_To_HHUSA__c))
+
+###############
+
+NarrowSurveyContact <- SFContact[,c(1,184,108,321,25,4,6,303,44,45,126,149,382)]
+NarrowSurveyFeedback <- Feedback[,c(11,13,19)]
+
+##### WITH REGARDS TO FEEDBACK
+PotentialSurveyClient <- left_join(NarrowSurveyContact, NarrowSurveyFeedback, by = c("Id" = "ContactID__c"))
+PotentialSurveyClient <- PotentialSurveyClient %>% mutate_all(na_if,"")
+SuccessfulSurveyClient <- PotentialSurveyClient %>% filter(!is.na(PotentialSurveyClient$Survey_Name__c))
+UnsuccessfulSurveyClient <- PotentialSurveyClient %>% filter(is.na(PotentialSurveyClient$Survey_Name__c))
+
+
+# PotentialSurveyClient["ServiceCategory"] <- NA
+# 
+# is.na(x[i]))
+# 
+# for (i in 1:nrow(PotentialSurveyClient)) {
+#   if (PotentialSurveyClient[i,"Service_Rank__c"] == "E-4") {
+#     PotentialSurveyClient$ServiceCategory <- "E"
+#   }
+#   else {
+#     PotentialSurveyClient[i,"ServiceCategory"] <- NA
+#   }
+# }
+
+
+
+## RANK
+PRS <- PotentialSurveyClient %>%
+  filter(!is.na(PotentialSurveyClient$Service_Rank__c)) %>%
+  group_by(Service_Rank__c) %>% 
+  dplyr::summarise( percent = 100 * n() / nrow(PotentialSurveyClient))
+# Enlisted 62%, Officers 9%, Warrant Officer 1.4%
+SRS <- SuccessfulSurveyClient %>%
+  filter(!is.na(SuccessfulSurveyClient$Service_Rank__c)) %>%
+  group_by(Service_Rank__c) %>% 
+  dplyr::summarise( percent = 100 * n() / nrow(SuccessfulSurveyClient))
+# Enlisted 71%, Officers 17%, Warrant Officer 2.5%
+# UnsuccessfulSurveyClient %>%
+#   filter(!is.na(UnsuccessfulSurveyClient$Service_Rank__c)) %>%
+#   group_by(Service_Rank__c) %>% 
+#   dplyr::summarise( percent = 100 * n() / nrow(UnsuccessfulSurveyClient))
+knitr::kable(list(PRS,SRS,caption = "Potential Vs. Successful"))
+
+
+PRSGraph <- ggplot(data = PRS) + 
+  geom_bar(mapping = aes(x = Service_Rank__c, y = percent, fill = Service_Rank__c), stat = "summary") + ggtitle("Potential by Rank") + labs(x = "Rank", y = "%") + theme(legend.position="none") + ylim(0,20)
+
+SRSGraph <- ggplot(data = SRS) + 
+  geom_bar(mapping = aes(x = Service_Rank__c, y = percent, fill = Service_Rank__c), stat = "summary") + ggtitle("Successful by Rank") + labs(x = "Rank", y = "%") + theme(legend.position="none") + ylim(0,20)
+
+
+grid.arrange(PRSGraph, SRSGraph, ncol = 2)
+
+
+
+## BRANCH
+PBS <- PotentialSurveyClient %>%
+  group_by(Service_Branch__c) %>% 
+  dplyr::summarise( percent = 100 * n() / nrow(PotentialSurveyClient))
+# Army 39%, Air Force 10%, Navy 11%, Marines 10% Coast Guard, Spouse, Merchant Marine < 1%
+
+SBS <- SuccessfulSurveyClient %>%
+  group_by(Service_Branch__c) %>% 
+  dplyr::summarise( percent = 100 * n() / nrow(SuccessfulSurveyClient))
+# Army 47%, Air Force 16%, Navy 16%, Marines 12% Coast Guard < 1%, NA 8%
+knitr::kable(list(PBS,SBS,caption = "Potential Vs. Successful"))
+
+PBS <- PBS[-c(5,7,8,9), ]
+SBS <- SBS[-c(6,7), ]
+
+PBSGraph <- ggplot(data = PBS) + 
+  geom_bar(mapping = aes(x = Service_Branch__c, y = percent, fill = Service_Branch__c), stat = "summary") + ggtitle("Potential by Branch") + labs(x = "Branch", y = "%") + theme(legend.position="none") + ylim(0,50)
+
+SBSGraph <- ggplot(data = SBS) + 
+  geom_bar(mapping = aes(x = Service_Branch__c, y = percent, fill = Service_Branch__c), stat = "summary") + ggtitle("Successful by Branch") + labs(x = "Branch", y = "%") + theme(legend.position="none") + ylim(0,50)
+
+
+grid.arrange(PBSGraph, SBSGraph, ncol = 2)
+
+## GENDER
+PGS <- PotentialSurveyClient %>%
+  group_by(Gender__c) %>% 
+  summarise( percent = 100 * n() / nrow(PotentialSurveyClient))
+# Female 13%, Male 41% NA 46%
+
+SGS <- SuccessfulSurveyClient %>%
+  group_by(Gender__c) %>% 
+  summarise( percent = 100 * n() / nrow(SuccessfulSurveyClient))
+# Female 21%, Male 70%, NA 9%
+
+knitr::kable(list(PGS,SGS,caption = "Potential Vs. Successful"))
+
+## SPOUSE STATUS
+
+PSS <- PotentialSurveyClient %>%
+  group_by(Military_Spouse_Caregiver__c) %>% 
+  dplyr::summarise( percent = 100 * n() / nrow(PotentialSurveyClient))
+# Veteran 96%, Spouse 4%
+
+SSS <- SuccessfulSurveyClient %>%
+  group_by(Military_Spouse_Caregiver__c) %>% 
+  dplyr::summarise( percent = 100 * n() / nrow(SuccessfulSurveyClient))
+# Veteran 93% Spouse 7%
+
+
+PSSGraph <- ggplot(data = PSS) + 
+  geom_bar(mapping = aes(x = Military_Spouse_Caregiver__c, y = percent, fill = Military_Spouse_Caregiver__c), stat = "summary") + ggtitle("Potential by Spouse") + labs(x = "Spouse", y = "%") + theme(legend.position="none")
+
+SSSGraph <- ggplot(data = SSS) + 
+  geom_bar(mapping = aes(x = Military_Spouse_Caregiver__c, y = percent, fill = Military_Spouse_Caregiver__c), stat = "summary") + ggtitle("Successful by Spouse") + labs(x = "Spouse", y = "%") + theme(legend.position="none")
+
+
+grid.arrange(PSSGraph, SSSGraph, ncol = 2)
+
+
+
+knitr::kable(list(PSS,SSS,caption = "Potential Vs. Successful"))
+
+# PotentialSpouseSurvey <- PotentialSurveyClient %>% 
+#   group_by(Military_Spouse_Caregiver__c) %>% # Variable to be transformed
+#   count() %>% 
+#   ungroup() %>% 
+#   mutate(perc = `n` / sum(`n`)) %>% 
+#   arrange(perc) %>%
+#   mutate(labels = scales::percent(perc))
+# 
+# 
+# PSSGRAPH<- ggplot(PotentialSpouseSurvey, aes(x = "", y = perc, fill = Military_Spouse_Caregiver__c)) +
+#  geom_bar(stat="identity", width=1, color="white") +
+#   coord_polar("y", start=0) +
+#   theme_void() + ggtitle("Potential Surveys")
+# 
+# 
+# SuccessfulSpouseSurvey <- SuccessfulSurveyClient %>% 
+#   group_by(Military_Spouse_Caregiver__c) %>% # Variable to be transformed
+#   count() %>% 
+#   ungroup() %>% 
+#   mutate(perc = `n` / sum(`n`)) %>% 
+#   arrange(perc) %>%
+#   mutate(labels = scales::percent(perc))
+# 
+# 
+# SSSGRAPH<- ggplot(SuccessfulSpouseSurvey, aes(x="", y= perc, fill=Military_Spouse_Caregiver__c)) +
+#   geom_bar(stat="identity", width=1, color="white") +
+#   coord_polar("y", start=0) +
+#   theme_void() + ggtitle("Successful Surveys")
+# 
+# grid.arrange(PSSGRAPH, SSSGRAPH, ncol = 2)
+# 
+# 
+# ggplot(data, aes(x="", y=prop, fill=group)) +
+#   geom_bar(stat="identity", width=1, color="white") +
+#   coord_polar("y", start=0) +
+#   theme_void() + 
+#   theme(legend.position="none") +
+
+## Why do I keep trying to make pie charts a thing? They don't show the information off as well as bar graphs
+
+
+# Looking at our potential survey clients versus our successful clients we see several trends. For instance, we primarily hear back from enlisted and then officers, the branches we are hearing the most back from are the army, air force and navy. Our respondents are primarily male. This is just me describing a demographic and not answering the question I am frustrated and gonna call it for the day.
+
+```
+  
+Q: Is there a way to tell what communication method (call, texting or email) is more successful with clients, either based 
+on their success in job placement or some other outcome? What about with regards to completed Volunteer Requests?
+
+```{r}
+###important!!!************************************************************
+which( colnames(Activities_Contact_Join) == "Volunteer__c" )
+
+grep("Color", colnames(Activities_Contact_Join)) #jajaja
+
+summary(as.factor(SFContact$Date_Assigned_To_HHUSA__c))
+
+###############   270 in SFContact is preferred method of contact >.<
+Activities_Contact_Join <- left_join(SFContact, SF2018Activities, by = c("Id" = "WHOID"))
+NarrowedACJ <- Activities_Contact_Join[,c(1,99,57,93,396,400,430:434,437,438,442:453)]
+NarrowEmail <- EmailHistoryContact[,c(19,20,22)]
+Email_Contact_Join <- left_join(NarrowEmail, NarrowedACJ, by = c("vr__Contact__c" = "Id"))
+
+SuccessfulContact <- Email_Contact_Join %>% filter(Active_Color__c == "Blue")
+USC <- Email_Contact_Join %>% filter(!(Active_Color__c == "Blue"))
+
+SuccessfulContact %>%
+  group_by(TASKSUBTYPE) %>% 
+  summarise( percent = 100 * n() / nrow(SuccessfulContact))
+# 34% calls, 44% email
+
+USC %>%
+  group_by(TASKSUBTYPE) %>% 
+  summarise( percent = 100 * n() / nrow(USC))
+# 35% email, 28% call
+
+SuccessfulContact %>%
+  group_by(TYPE) %>% 
+  summarise( percent = 100 * n() / nrow(SuccessfulContact))
+# 85% counseling
+
+SuccessfulContact %>%
+  group_by(Responsive__c) %>% 
+  summarise( percent = 100 * n() / nrow(SuccessfulContact))
+# 95% have responded to outreach
+
+USC %>%
+  group_by(Responsive__c) %>% 
+  summarise( percent = 100 * n() / nrow(USC))
+# 70% responded to out reach
+
+SuccessfulContact %>%
+  group_by(Volunteer__c) %>% 
+  summarise( percent = 100 * n() / nrow(SuccessfulContact))
+# 98% have *not* been listed as volunteers
+
+SCVolunteers <- SuccessfulContact %>% filter(Volunteer__c == "1")
+USCVolunteers <- USC %>% filter(Volunteer__c == "1")
+
+SCVolunteers %>%
+  group_by(TASKSUBTYPE) %>% 
+  summarise( percent = 100 * n() / nrow(SCVolunteers))
+# Of volunteers, 67% response from email and 15% response from calls
+
+USCVolunteers %>%
+  group_by(TASKSUBTYPE) %>% 
+  summarise( percent = 100 * n() / nrow(USCVolunteers))
+
+## Based on successful clients (active color Blue), they seem to respond better to phone calls than email or text. Also, for volunteers it was backwards, of those successful and volunteersthey responded more to emails than to the calls.
+
+
+```
+
+Q: Is there anything in the client's demographic profile that indicates that a client is more likely to become a confirmed 
+hire or any other outcome? 
+p.130 of appendix answers this
+
+```{r}
+
+NarrowContact <- SFContact[,c(25,26,50,52,57,101,108,184)]
+NarrowContact <- NarrowContact %>% filter(Highest_Level_of_Education_Completed__c == "High School/GED" |Highest_Level_of_Education_Completed__c == "4 Year Degree (BA, BS, etc.)" | Highest_Level_of_Education_Completed__c == "2 Year Degree (AA, AS, etc.)" | Highest_Level_of_Education_Completed__c == " Post-Graduate Degree (MA, MS, JD, etc.)" )
+NarrowContact <- NarrowContact %>% filter(Status__c == "Active Duty" | Status__c == "Unemployed")
+
+summary(as.factor(NarrowContact$Highest_Level_of_Education_Completed__c))
+
+#NarrowContact <- NarrowContact %>% mutate(Enlisted = grepl("E", Service_Rank__c)) That makes a new column :/
+#colnames(NarrowContact)
+# SuccessfulHire <- NarrowContact %>% filter(Active_Color__c == "Blue") nah just make a column for it
+
+NarrowContact$Service_Rank__c <- as.character(NarrowContact$Service_Rank__c)
+
+NarrowContact$Service_Rank__c[NarrowContact$Service_Rank__c %in% "E-1"] <- "E"
+NarrowContact$Service_Rank__c[NarrowContact$Service_Rank__c %in% "E-2"] <- "E"
+NarrowContact$Service_Rank__c[NarrowContact$Service_Rank__c %in% "E-3"] <- "E"
+NarrowContact$Service_Rank__c[NarrowContact$Service_Rank__c %in% "E-4"] <- "E"
+NarrowContact$Service_Rank__c[NarrowContact$Service_Rank__c %in% "E-5"] <- "E"
+NarrowContact$Service_Rank__c[NarrowContact$Service_Rank__c %in% "E-6"] <- "E"
+NarrowContact$Service_Rank__c[NarrowContact$Service_Rank__c %in% "E-7"] <- "E"
+NarrowContact$Service_Rank__c[NarrowContact$Service_Rank__c %in% "E-8"] <- "E"
+NarrowContact$Service_Rank__c[NarrowContact$Service_Rank__c %in% "E-9"] <- "E"
+
+NarrowContact$Service_Rank__c[NarrowContact$Service_Rank__c %in% "O-1"] <- "O"
+NarrowContact$Service_Rank__c[NarrowContact$Service_Rank__c %in% "O-2"] <- "O"
+NarrowContact$Service_Rank__c[NarrowContact$Service_Rank__c %in% "O-3"] <- "O"
+NarrowContact$Service_Rank__c[NarrowContact$Service_Rank__c %in% "O-4"] <- "O"
+NarrowContact$Service_Rank__c[NarrowContact$Service_Rank__c %in% "O-5"] <- "O"
+NarrowContact$Service_Rank__c[NarrowContact$Service_Rank__c %in% "O-6"] <- "O"
+NarrowContact$Service_Rank__c[NarrowContact$Service_Rank__c %in% "O-7"] <- "O"
+NarrowContact$Service_Rank__c[NarrowContact$Service_Rank__c %in% "O-8"] <- "O"
+NarrowContact$Service_Rank__c[NarrowContact$Service_Rank__c %in% "O-9"] <- "O"
+
+NarrowContact <- NarrowContact %>% filter(Service_Rank__c == "E" | Service_Rank__c == "O")
+
+NarrowContact$ConfirmedHire <- ifelse( NarrowContact$Active_Color__c != "Blue", "0", "1") #there ya go
+NarrowContact$Active_Color__c = as.factor(NarrowContact$Active_Color__c)
+NarrowContact$Gender__c = as.factor(NarrowContact$Gender__c)
+NarrowContact$Highest_Level_of_Education_Completed__c = as.factor(NarrowContact$Highest_Level_of_Education_Completed__c)
+NarrowContact$Race__c = as.factor(NarrowContact$Race__c)
+NarrowContact$Status__c = as.factor(NarrowContact$Status__c)
+NarrowContact$Disability_Rating__c = as.factor(NarrowContact$Disability_Rating__c)
+NarrowContact$Service_Branch__c = as.factor(NarrowContact$Service_Branch__c)
+NarrowContact$Service_Rank__c = as.factor(NarrowContact$Service_Rank__c)
+NarrowContact$ConfirmedHire = as.factor(NarrowContact$ConfirmedHire)
+
+
+#summary(as.factor(NarrowContact$Highest_Level_of_Education_Completed__c))
+
+EducationHire <- lm(ConfirmedHire ~ 0 + Highest_Level_of_Education_Completed__c, data = NarrowContact)
+StatusHire <- lm(ConfirmedHire ~ 0 + Status__c, data = NarrowContact)
+ServiceHire <- lm(ConfirmedHire ~ 0 + Service_Rank__c, data = NarrowContact)
+
+summary(EducationHire)
+summary(StatusHire)
+summary(ServiceHire)
+
+# ggplot(EducationHire, aes(x = Highest_Level_of_Education_Completed__c, y = ConfirmedHire)) + 
+#   geom_point() +
+#   stat_smooth(method = "lm", col = "red") WAIT plotting this won't work from 0 to 1...
+
+  # mylogitnarrowed <- glm(ConfirmedHire ~ Highest_Level_of_Education_Completed__c + Status__c + Service_Rank__c, data = NarrowContact, family = "binomial")
+# summary(mylogitnarrowed)
+
+
+# We can see three demographics affect a client being a likely hire: rank, education, and active/unemployed. Those with a degree than highschool/ged have a better chance of being hired. Those whose rank is officer is better to be hired than those whose rank is enlisted. Those who are currently unemployed over active have a better chance of being hired.
+```
